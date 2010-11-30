@@ -1,0 +1,93 @@
+#!/usr/bin/ruby
+# encoding: utf-8
+
+=begin
+
+=head1 NAME
+
+mailblock - Munin plugin to monitor number of IPs blocked by Mailblock
+
+=head1 APPLICABLE SYSTEMS
+
+All systems Maiblock compatible.
+
+=head1 CONFIGURATION
+
+In the source directly.
+
+=head1 INTERPRETATION
+
+This plugin returns simply number of hosts in Mailblock's tracking file
+and averages lengths of blocks.
+
+=head1 VERSION
+
+0.2 Upper Mailblock version tracking file format and additional lines.
+0.1 First release.
+
+=head1 BUGS
+
+None known
+
+=head1 AUTHOR
+
+Original: Martin Kozák (martinkozak@martinkozak.net)
+
+=head1 LICENSE
+
+Public Domain.
+
+=end
+
+#TRACKING_FILE = "/data/applications/hosting/mailblock.dat"
+TRACKING_FILE = "../../source/mailblock.dat"
+
+###
+
+if not ARGV[0].nil?
+    arg = ARGV[0].to_sym
+end
+
+if arg == :autoconf
+    puts "yes"
+    exit
+end
+
+if arg == :config
+    puts 'graph_title Active Mailblocks'
+    puts 'graph_category other'
+    puts 'graph_args --base 1024 --vertical-label units -l 0'
+    
+    puts 'count.label Blocks count'
+    puts 'count.draw AREA'
+    puts 'avgremlength.label Average remaining length (days)'
+    puts 'avgremlength.draw LINE2'
+    puts 'maxremlength.label Maximal remaining length (days)'
+    puts 'maxremlength.draw LINE2'
+    puts 'minremlength.label Minimal remaining length (days)'
+    puts 'minremlength.draw LINE2'
+    
+    exit
+end
+
+###
+
+if not File.exists? TRACKING_FILE
+    exit
+end
+
+now = Time.now
+status = Marshal.load(File.read(TRACKING_FILE))
+
+lengths = status[:blocks].map do |ip, data|
+    data[:expiration] - now
+end
+
+sum = lengths.inject(0) do |x, i|
+    x += i
+end
+
+puts "count.value " << lengths.length.to_s
+puts "avgremlength.value " << ((sum / lengths.length.to_f) / 60 / 60 / 24).to_s
+puts "maxremlength.value " << (lengths.max / 60 / 60 / 24).to_s
+puts "minremlength.value " << (lengths.min / 60 / 60 / 24).to_s
