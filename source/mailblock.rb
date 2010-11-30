@@ -31,7 +31,7 @@ def scan_file(seek = 0)
                 next
             end
             
-            if (line.include? "Client host rejected") or (line.include? "blocked using") or (line.include? "Sender address rejected")
+            if (line.include? "Client host rejected") or (line.include? "blocked using") or (line.include? "Sender address rejected") or (line.include? "too many errors after HELO")
                 yield line.match(HOST_MATCHER)[1].to_sym
             end
         end
