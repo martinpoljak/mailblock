@@ -1,6 +1,10 @@
 #!/usr/bin/ruby
 # encoding: utf-8
 
+require "time"
+
+###
+
 LOG = "./mail.log"
 STATUS = "./mailblock.dat"
 
@@ -10,6 +14,8 @@ MEMORY_BACK = 1 * DAY          # one day
 BLOCK_UNIT = 2 * DAY           # two days
 LIMIT = 90 * DAY               # three months
 
+YESTERDAY = Time.now - MEMORY_BACK
+
 ###
 
 def scan_file(seek = 0)
@@ -17,6 +23,14 @@ def scan_file(seek = 0)
     File.open(LOG, "r") do |io|
         io.seek(seek)
         io.each_line do |line|
+            begin
+                if Time.parse(line[0..14]) < YESTERDAY
+                    next
+                end
+            rescue ArgumentError
+                next
+            end
+            
             if (line.include? "Client host rejected") or (line.include? "blocked using") or (line.include? "Sender address rejected")
                 yield line.match(HOST_MATCHER)[1].to_sym
             end
@@ -100,7 +114,6 @@ block.each do |ip, incidents_count|
     expiration = Time.now + length
     
     puts "Blocking '" << ip.to_s << "': will expire " << expiration.to_s
-    system("iptables -I INPUT -i eth0 -s " << ip.to_s << "/32 -j DROP")
     status[:blocks] << [ip, {:start => Time.now, :expiration => expiration}]
     
     system("iptables -I INPUT -i eth0 -s " << ip.to_s << "/32 -j DROP")
