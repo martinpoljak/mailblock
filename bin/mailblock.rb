@@ -40,10 +40,21 @@ end
 
 ###
 
+changed = false
+create_new = false
+
 # Loads status
-if File.exists? STATUS
-    status = Marshal.load(File::read(STATUS))
+if (File.exists? STATUS) and (File.size(STATUS) > 0)
+    begin
+        status = Marshal.load(File.read(STATUS))
+    rescue TypeError
+        create_new = true
+    end
 else
+    create_new = true
+end
+
+if create_new
     status = { 
         :logsize => 0,
         :track => { },
@@ -59,6 +70,7 @@ seek = status[:logsize]
 
 if size < status[:logsize]
     status[:logsize] = 0
+    seek = 0
 else
     status[:logsize] = size
 end
@@ -99,6 +111,8 @@ status[:blocks].reject! do |ip, data|
     resolution = data[:expiration] < Time.now
     if resolution
         system("iptables -D INPUT -i eth0 -s " << ip.to_s << "/32 -j DROP")
+        changed = true
+        
         puts "Unblocking '" << ip.to_s << "'"
     end
     resolution # returns
@@ -117,6 +131,11 @@ block.each do |ip, incidents_count|
     status[:blocks] << [ip, {:start => Time.now, :expiration => expiration}]
     
     system("iptables -I INPUT -i eth0 -s " << ip.to_s << "/32 -j DROP")
+    changed = true
+end
+
+if changed
+    system("/etc/rc.d/iptables save")
 end
 
 # Dumps status
