@@ -77,7 +77,12 @@ if (not File.exists? TRACKING_FILE) or (File.size(TRACKING_FILE) == 0)
 end
 
 now = Time.now
-status = Marshal.load(File.read(TRACKING_FILE))
+
+begin
+    status = Marshal.load(File.read(TRACKING_FILE))
+rescue TypeError
+    exit
+end
 
 lengths = status[:blocks].map do |ip, data|
     data[:expiration] - now
