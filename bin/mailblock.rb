@@ -7,6 +7,7 @@ require "time"
 
 LOG = "./mail.log"
 STATUS = "./mailblock.dat"
+WHITELIST = [:"127.0.0.1"]
 
 HOST_MATCHER = /\[(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\]/
 DAY = 24 * 60 * 60
@@ -96,7 +97,7 @@ track.each_pair do |ip, incidents|
     
     if incidents.empty?
         remove << ip
-    elsif (incidents.length > 1) and (ip != :"127.0.0.1")
+    elsif (incidents.length > 1) and  (not WHITELIST.include? ip)
         remove << ip
         block << [ip, incidents.length]
     end
@@ -109,7 +110,7 @@ end
 # Cancels expired blocks
 status[:blocks].reject! do |ip, data|
     resolution = data[:expiration] < Time.now
-    if resolution
+    if resolution or (WHITELIST.include? ip)
         system("iptables -D INPUT -i eth0 -s " << ip.to_s << "/32 -j DROP")
         changed = true
         
