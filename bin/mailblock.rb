@@ -109,8 +109,8 @@ end
 
 # Cancels expired blocks
 status[:blocks].reject! do |ip, data|
-    resolution = (data[:expiration] < Time.now) or (WHITELIST.include? ip)
-    if resolution or (WHITELIST.include? ip)
+    resolution = ((data[:expiration] < Time.now) or (WHITELIST.include? ip))
+    if resolution
         system("iptables -D INPUT -i eth0 -s " << ip.to_s << "/32 -j DROP")
         changed = true
         
